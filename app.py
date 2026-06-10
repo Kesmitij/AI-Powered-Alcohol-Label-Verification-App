@@ -319,9 +319,12 @@ with tab_single:
             st.session_state.single_provided = extracted.model_copy()
             sync_provided_to_widgets(st.session_state.single_provided)
 
-            # Force a clean rerun so the side-by-side data panels and results
-            # reliably populate on all devices (including mobile browsers, which
-            # can behave differently with file_uploader state updates).
+            # Increment the uploader key to "consume" the upload (removes the file
+            # from the uploader list visually) and force a clean rerun. This prevents
+            # the extraction from re-running on every subsequent script execution.
+            if "single_uploader_key" not in st.session_state:
+                st.session_state.single_uploader_key = 0
+            st.session_state.single_uploader_key += 1
             st.rerun()
 
         # Clear button after upload handling so it sees the freshly set bytes on the same run
