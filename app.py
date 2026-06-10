@@ -319,6 +319,11 @@ with tab_single:
             st.session_state.single_provided = extracted.model_copy()
             sync_provided_to_widgets(st.session_state.single_provided)
 
+            # Force a clean rerun so the side-by-side data panels and results
+            # reliably populate on all devices (including mobile browsers, which
+            # can behave differently with file_uploader state updates).
+            st.rerun()
+
         # Clear button after upload handling so it sees the freshly set bytes on the same run
         has_image = bool(st.session_state.get("single_image_bytes"))
         if st.button("Clear this label", disabled=not has_image, use_container_width=True):
