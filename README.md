@@ -32,7 +32,7 @@ Built to honor the real constraints and user needs from the discovery notes:
      XAI_API_KEY=your_xai_key_here
      ```
    - Or once deployed on streamlit, add to secrets
-
+4. Examples are embedded within the app, you can also download the "Download and Test Sample" files if you want to test uploading them directly.
 ---
 
 ## Using the App
