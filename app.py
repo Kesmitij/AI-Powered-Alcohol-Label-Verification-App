@@ -336,7 +336,7 @@ with tab_single:
             except Exception:
                 st.warning("Could not display the image, but the bytes are loaded.")
         else:
-            st.info("Upload a label or use one of the sample buttons above.")
+            st.info("Upload a label or use one of the sample buttons below.")
 
         # Show extract time for the current single sample (persists after rerun)
         if st.session_state.get("single_extract_time") is not None:
