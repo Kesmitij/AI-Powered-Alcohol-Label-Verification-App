@@ -132,10 +132,11 @@ def _build_extraction_prompt() -> str:
         "You are an expert TTB alcohol beverage label compliance reviewer.\n"
         "Carefully read the provided label image and extract the information into the exact JSON structure below.\n\n"
         "STEP 1: Identify the beverage type from visual cues, class/type text, design style, and wording.\n"
-        "Choose exactly one of these three values for 'beverage_type':\n"
+        "You MUST return exactly one of these three strings for 'beverage_type' (do not invent others, do not leave blank):\n"
         "- 'Distilled Spirits' (whiskey, vodka, gin, rum, tequila, brandy, etc.)\n"
         "- 'Wine' (table wine, sparkling, dessert, including qualifying ciders/meads)\n"
-        "- 'Malt Beverage' (beer, ale, lager, stout, or flavored malt beverages)\n\n"
+        "- 'Malt Beverage' (beer, ale, lager, stout, or flavored malt beverages)\n"
+        "If uncertain from the image, choose the most likely based on the class/type text and overall label design.\n\n"
         "STEP 2: Extract fields. Only populate type-specific fields when they are visible and relevant; otherwise use empty string.\n\n"
         "Return ONLY a single valid JSON object (no markdown, no extra text) with these exact keys:\n"
         "{\n"
@@ -209,8 +210,23 @@ def extract_from_image(
         raw = response.choices[0].message.content or "{}"
         parsed: dict[str, Any] = json.loads(raw)
 
+        # Robust beverage_type detection: use what the model returned, or infer from class_type text
+        # This helps when the vision model doesn't perfectly follow the "beverage_type" key on real photos.
+        bev = parsed.get("beverage_type", "").strip()
+        if not bev or bev not in ("Distilled Spirits", "Wine", "Malt Beverage"):
+            ct = (parsed.get("class_type", "") or "").lower()
+            if any(x in ct for x in ["whiskey", "vodka", "gin", "rum", "tequila", "brandy", "bourbon", "scotch", "spirit"]):
+                bev = "Distilled Spirits"
+            elif any(x in ct for x in ["wine", "cabernet", "merlot", "chardonnay", "pinot", "sparkling", "dessert"]):
+                bev = "Wine"
+            elif any(x in ct for x in ["beer", "ale", "lager", "stout", "porter", "ipa", "malt beverage"]):
+                bev = "Malt Beverage"
+            else:
+                bev = "Distilled Spirits"  # safe default for most alcohol labels
+
         # Clean up and construct
         label = LabelData(
+            beverage_type=bev,
             brand_name=parsed.get("brand_name", "").strip(),
             class_type=parsed.get("class_type", "").strip(),
             alcohol_content=parsed.get("alcohol_content", "").strip(),
@@ -218,6 +234,9 @@ def extract_from_image(
             government_warning=parsed.get("government_warning", "").strip(),
             bottler=parsed.get("bottler", "").strip(),
             country_of_origin=parsed.get("country_of_origin", "").strip(),
+            appellation_of_origin=parsed.get("appellation_of_origin", "").strip(),
+            age_statement=parsed.get("age_statement", "").strip(),
+            statement_of_composition=parsed.get("statement_of_composition", "").strip(),
         )
         notes = parsed.get("notes", "").strip()
         return label, notes
